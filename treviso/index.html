@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treviso: mapa interactivo y gastronomía</title>
+<style>
+  :root{
+    --paper:#f4ecdc; --paper2:#ebe0c8; --card:#fbf6ea; --ink:#2b2118; --muted:#7a6a55;
+    --brick:#b4432a; --ochre:#c98a2b; --water:#3f7d86; --water-l:#bcd7d6;
+    --food:#5b7a2e; --line:rgba(43,33,24,.18);
+    --display:"Bodoni 72","Didot","Bodoni MT",serif;
+    --body:"Iowan Old Style","Palatino","Palatino Linotype","Book Antiqua",serif;
+    --sc:"Optima","Candara","Gill Sans",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;
+    background-image:radial-gradient(rgba(120,90,50,.07) 1px,transparent 1px);background-size:5px 5px}
+  .app{height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr);padding:16px 22px 56px;gap:12px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;border-bottom:2px solid var(--ink);padding-bottom:8px;flex-wrap:wrap}
+  .kicker{font-family:var(--sc);letter-spacing:.26em;text-transform:uppercase;font-size:10.5px;color:var(--brick)}
+  h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,4.2vw,52px);line-height:.9;margin:2px 0 0}
+  h1 em{color:var(--brick)}
+  .tabs{display:flex;gap:0;border:1.5px solid var(--ink)}
+  .tabs button{font-family:var(--sc);font-size:13px;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:0;padding:9px 18px;cursor:pointer;color:var(--ink)}
+  .tabs button+button{border-left:1.5px solid var(--ink)}
+  .tabs button.on{background:var(--ink);color:var(--paper)}
+  .view{display:none;min-height:0;height:100%}
+  .view.on{display:grid}
+  /* MAPA */
+  #vMap{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px}
+  .mapbox{position:relative;border:1.5px solid var(--ink);background:var(--paper2);min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .chip{font-family:var(--sc);font-size:12px;border:1.5px solid var(--ink);background:var(--card);padding:4px 10px 4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+  .chip i{width:10px;height:10px;border-radius:50%;border:1.2px solid var(--ink)}
+  .chip.off{opacity:.35;text-decoration:line-through}
+  .svgwrap{flex:1;min-height:0;position:relative}
+  svg{position:absolute;inset:0;width:100%;height:100%}
+  .pin{cursor:pointer;transition:opacity .25s}
+  .pin.hide{opacity:0;pointer-events:none}
+  .pin circle{transition:stroke-width .2s}
+  .pin:hover circle{stroke-width:3.5}
+  .pin.active circle.halo{opacity:1}
+  .halo{opacity:0;fill:none;stroke:var(--ink);stroke-width:2;transition:opacity .2s}
+  .pin text.n{font-family:var(--sc);font-size:15px;fill:#fff;pointer-events:none}
+  .lbl{font-family:var(--body);font-style:italic;font-size:15px;fill:var(--ink);paint-order:stroke;stroke:var(--paper2);stroke-width:4px;pointer-events:none}
+  #route{fill:none;stroke:var(--brick);stroke-width:3.5;stroke-dasharray:2 9;stroke-linecap:round;opacity:0;transition:opacity .3s}
+  #route.on{opacity:.9}
+  .mapnote{position:absolute;left:10px;bottom:8px;font-family:var(--sc);font-size:10.5px;color:var(--muted);background:rgba(235,224,200,.85);padding:2px 6px}
+  .side{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;min-height:0;min-width:0}
+  .card{border:1.5px solid var(--ink);background:var(--card);padding:18px 20px;overflow:auto;min-height:0;position:relative}
+  .card .num{font-family:var(--display);font-size:48px;line-height:1;color:var(--brick)}
+  .card .tag{font-family:var(--sc);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .card h2{font-family:var(--display);font-weight:400;font-size:28px;margin:2px 0 4px;line-height:1.05}
+  .card p{margin:8px 0 0}
+  .card .tip{border-top:1px dashed var(--line);margin-top:12px;padding-top:8px;font-size:13.5px;color:var(--muted)}
+  .card .go{margin-top:12px}
+  .nav{display:flex;gap:8px;align-items:center}
+  .btn{font-family:var(--sc);font-size:12.5px;letter-spacing:.06em;border:1.5px solid var(--ink);background:var(--card);padding:8px 12px;cursor:pointer;color:var(--ink)}
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .btn.primary{background:var(--brick);border-color:var(--brick);color:#fff}
+  .btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+  .nav .count{font-family:var(--sc);font-size:12px;color:var(--muted);margin-left:auto}
+  .routebar{font-size:12.5px;color:var(--muted);font-family:var(--sc);display:none;margin-top:4px}
+  .routebar.on{display:block}
+  /* GASTRONOMÍA */
+  #vFood{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px}
+  .foodgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);border-top:1.5px solid var(--ink);border-left:1.5px solid var(--ink);min-height:0}
+  .tile{border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);padding:12px 14px;cursor:pointer;background:transparent;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;justify-content:space-between;min-height:0;overflow:hidden;transition:background .15s}
+  .tile:hover{background:var(--card)}
+  .tile.on{background:var(--ink);color:var(--paper)}
+  .tile.on .t{color:var(--ochre)}
+  .tile .t{font-family:var(--sc);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  .tile h3{font-family:var(--display);font-weight:400;font-size:clamp(17px,1.7vw,24px);line-height:1.05;margin:0}
+  .tile.star h3{color:var(--brick)}
+  .tile.on h3{color:var(--paper)}
+  .tile .ico{font-size:20px;line-height:1}
+  .season{font-family:var(--sc);font-size:12px;background:var(--food);color:#fff;padding:7px 12px;letter-spacing:.03em}
+  .fside{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;min-height:0;min-width:0}
+  .card .where{margin-top:10px;font-style:italic;color:var(--food)}
+  .card .tag.f{color:var(--food)}
+  .src{font-family:var(--sc);font-size:10.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+  .src a{color:var(--muted)}
+  @media (max-width:860px){
+    html,body{overflow:auto}
+    .app{height:auto}
+    #vMap,#vFood{grid-template-columns:minmax(0,1fr)}
+    .mapbox{height:62vh}
+    .foodgrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:110px}
+  }
+  @media print{
+    html,body{overflow:visible;height:auto}
+    .app{height:auto}
+    .view{display:grid!important;break-after:page}
+    .mapbox{height:150mm}
+    .nav,.tabs,.filters{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="kicker">Pianta della città · centro histórico</div>
+      <h1>Treviso, <em>a pie</em></h1>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="on" data-v="vMap">Mapa</button>
+      <button data-v="vFood">Gastronomía</button>
+    </div>
+  </header>
+
+  <!-- MAPA -->
+  <section class="view on" id="vMap">
+    <div class="mapbox">
+      <div class="filters" id="filters"></div>
+      <div class="svgwrap">
+        <svg id="map" viewBox="0 0 1000 920" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plano esquemático del centro de Treviso">
+          <defs>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(43,33,24,.10)" stroke-width="2"/>
+            </pattern>
+          </defs>
+          <path d="M48,282 L132,128 L380,66 L626,56 L896,98 L958,300 L946,566 L884,712 L646,866 L396,856 L188,734 L66,526 Z" fill="none" stroke="var(--water-l)" stroke-width="30" stroke-linejoin="round"/>
+          <path d="M60,282 L140,140 L380,80 L620,70 L880,110 L940,300 L930,560 L870,700 L640,850 L400,840 L200,720 L80,520 Z" fill="url(#hatch)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+          <path d="M0,900 C150,880 300,905 430,890 C560,876 660,882 760,840 C850,800 930,770 1000,780" fill="none" stroke="var(--water)" stroke-width="22" stroke-linecap="round" opacity=".85"/>
+          <text class="lbl" x="150" y="872" style="font-size:20px">fiume Sile</text>
+          <path d="M640,0 C650,120 660,260 668,380 C676,470 700,520 712,600 C724,700 742,780 760,840" fill="none" stroke="var(--water)" stroke-width="9" opacity=".8"/>
+          <path d="M668,380 C640,400 610,430 560,440" fill="none" stroke="var(--water)" stroke-width="6" opacity=".7"/>
+          <path d="M712,600 C760,560 800,520 860,500" fill="none" stroke="var(--water)" stroke-width="5" opacity=".6"/>
+          <text class="lbl" x="676" y="230">Cagnan</text>
+          <path d="M410,360 L526,420" stroke="var(--ink)" stroke-width="2.5" stroke-dasharray="6 5" fill="none"/>
+          <text class="lbl" x="420" y="410" transform="rotate(27 420 410)">via Calmaggiore</text>
+          <path d="M526,420 L558,840" stroke="var(--line)" stroke-width="2" fill="none"/>
+          <path d="M84,278 L410,360" stroke="var(--line)" stroke-width="2" fill="none"/>
+          <path d="M526,420 L874,128" stroke="var(--line)" stroke-width="2" fill="none"/>
+          <g transform="translate(950,860)">
+            <path d="M0,-34 L8,0 L0,34 L-8,0 Z" fill="var(--ink)" opacity=".75"/>
+            <text x="-6" y="-40" style="font-family:var(--sc);font-size:14px;fill:var(--ink)">N</text>
+          </g>
+          <polyline id="route" points=""/>
+          <g id="pins"></g>
+        </svg>
+        <div class="mapnote">Plano esquemático, no a escala. Las posiciones son aproximadas.</div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card" id="card"></div>
+      <div>
+        <div class="nav">
+          <button class="btn" id="prev" aria-label="Anterior">←</button>
+          <button class="btn" id="next" aria-label="Siguiente">→</button>
+          <button class="btn primary" id="routeBtn">Ruta de medio día</button>
+          <span class="count" id="count"></span>
+        </div>
+        <div class="routebar" id="routebar">Ruta: Porta San Tomaso → San Francesco → Pescheria → Buranelli → Piazza dei Signori → Calmaggiore → Duomo → San Nicolò. Avanza con las flechas.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GASTRONOMÍA -->
+  <section class="view" id="vFood">
+    <div class="foodgrid" id="foodgrid"></div>
+    <div class="fside">
+      <div class="season">Noviembre es buen momento: empieza la temporada del radicchio tardivo (hasta marzo).</div>
+      <div class="card" id="fcard"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const C={m:'var(--brick)',c:'var(--ochre)',w:'var(--water)',f:'var(--food)'};
+const CATS=[['m','Monumentos'],['c','Iglesias'],['w','Agua y puertas'],['f','Comer y beber']];
+const P=[
+ {n:1,x:526,y:420,k:'m',t:'Piazza dei Signori',g:'Corazón cívico · s. XIII',d:'La plaza medieval de la ciudad, con el Palazzo dei Trecento (sede del consejo de la comuna, reconstruido tras 1944) y el Palazzo del Podestà con la torre cívica.',tip:'En el patio del Podestà hay una copia de la Fontana delle Tette (1559), que echaba vino cuando llegaba un nuevo podestà.',lx:0,ly:-24},
+ {n:2,x:410,y:360,k:'c',t:'Duomo y Baptisterio',g:'Catedral de San Pedro',d:'Catedral con cinco cúpulas, cripta románica de columnas (ss. XI y XII) y la Anunciación de Tiziano en la capilla Malchiostro. Al lado está el baptisterio románico de San Giovanni.',tip:'Baja a la cripta: es la parte más antigua del conjunto.',lx:-70,ly:-20},
+ {n:3,x:378,y:318,k:'m',t:'Mosaico de Via Canoniche',g:'Arqueología · s. IV',d:'Mosaico paleocristiano de una sala circular con siete exedras, probablemente el primer baptisterio. Tiene delfines, parras con amorcillos vendimiando y una cabeza que representa el otoño.',tip:'Se ve gratis a través de las cristaleras, detrás del Duomo.',lx:-40,ly:-22},
+ {n:4,x:253,y:593,k:'c',t:'San Nicolò',g:'Gótico dominico · ss. XIII y XIV',d:'La iglesia más grande de Treviso: unos 90 m de largo y techo en quilla de barco. Tiene un San Cristóbal de 12 m y el monumento Onigo.',tip:'En la Sala del Capítulo del seminario están los 40 dominicos de Tomaso da Modena (1352), con las gafas pintadas más antiguas que se conocen.',lx:-50,ly:34},
+ {n:5,x:595,y:462,k:'m',t:'Loggia dei Cavalieri',g:'Románico · s. XIII',d:'Logia abierta donde se reunía la nobleza, decorada con frescos de temas caballerescos. Es un buen ejemplo de la "urbs picta".',lx:30,ly:30},
+ {n:6,x:632,y:430,k:'w',t:'Canale dei Buranelli',g:'La postal de Treviso',d:'Casas con soportales y fachadas pintadas asomadas al agua, con pequeños puentes. Es el rincón más fotografiado de la ciudad.',lx:20,ly:-20},
+ {n:7,x:695,y:478,k:'w',t:'Isola della Pescheria',g:'Mercado sobre el agua',d:'Un islote en el Cagnan donde se monta el mercado de pescado por las mañanas, de martes a sábado. Alrededor hay muchas osterie.',tip:'Ve temprano para ver el mercado y quédate a un ombra.',lx:22,ly:6},
+ {n:8,x:737,y:255,k:'c',t:'San Francesco',g:'Gótico franciscano',d:'Iglesia de ladrillo con techo de madera y frescos del s. XIV. Aquí están enterrados Pietro Alighieri, hijo de Dante, y Francesca, hija de Petrarca.',lx:22,ly:6},
+ {n:9,x:842,y:420,k:'m',t:'Museo de Santa Caterina',g:'Arqueología y frescos',d:'Antiguo convento con piezas prehistóricas y romanas, pinacoteca y las Historias de Santa Úrsula de Tomaso da Modena.',lx:-150,ly:34},
+ {n:10,x:853,y:604,k:'c',t:'Santa Maria Maggiore',g:'La "Madonna Granda"',d:'El santuario mariano más querido por los trevisanos, con un fresco de la Virgen muy venerado.',lx:-170,ly:6},
+ {n:11,x:874,y:128,k:'w',t:'Porta San Tomaso',g:'Muralla veneciana · 1518',d:'La puerta más monumental, coronada por el león de San Marcos. Por ella se entraba desde el norte.',lx:-60,ly:-22},
+ {n:12,x:84,y:278,k:'w',t:'Porta Santi Quaranta',g:'Puerta oeste',d:'Puerta renacentista de las murallas del s. XVI. Desde aquí puedes caminar por el paseo sobre los bastiones.',lx:22,ly:-14},
+ {n:13,x:558,y:840,k:'w',t:'Porta Altinia',g:'Puerta sur',d:'La salida hacia Altino y Venecia, cerca del Sile. Es la puerta más cercana a la estación de tren.',lx:22,ly:-14},
+ {n:14,x:253,y:225,k:'m',t:'Museo Bailo',g:'Arte de los ss. XIX y XX',d:'Pinacoteca moderna con muchas obras del escultor Arturo Martini, nacido en Treviso.',lx:22,ly:6},
+ {n:15,x:560,y:378,k:'f',t:'Le Beccherie',g:'Cuna del tiramisù',d:'En la carta de este restaurante apareció el tiramisú en 1972. Desde marzo de 2026 tiene al lado una pastelería dedicada al tiramisú, con versión para comer paseando.',tip:'Piazza Ancilotto, a dos pasos de Piazza dei Signori.',lx:22,ly:-10,food:0},
+ {n:16,x:830,y:160,k:'f',t:'Antica Osteria Al Botegon',g:'Cicchetti clásicos',d:'Osteria a la sombra de Porta San Tomaso, recomendada para cicchetti, nervetti y ranas fritas.',lx:-200,ly:20,food:7},
+ {n:17,x:718,y:508,k:'f',t:"Muscoli's",g:'Osteria en la Pescheria',d:'Famosa por el "goeosesso": bocadillo caliente de mortadela, mascarpone y gorgonzola regado con Prosecco.',lx:22,ly:16,food:10},
+];
+const ROUTE=[11,8,7,6,1,2,3,4];
+const F=[
+ {i:'☕',t:'Postre · el gran icono',h:'Tiramisù',s:1,p:'Apareció en la carta de Le Beccherie en 1972, con la receta de Alba Campeol y el pastelero Roberto Linguanotto. En 2010 la Accademia Italiana della Cucina reconoció ese origen. En marzo de 2026 abrió al lado una pastelería solo de tiramisú, con el "Lingotto" para comer paseando.',w:'Le Beccherie y Tiramisù Le Beccherie, piazza Ancilotto',pin:15},
+ {i:'🥬',t:'Producto estrella',h:'Radicchio rosso tardivo IGP',s:1,p:'Hojas largas, rojas y blancas, crujientes y algo amargas. Se toma crudo, a la plancha con panceta o en lasaña y tagliatelle. Pruébalo en invierno, que es cuando está en temporada.',w:'En casi todas las trattorie durante la temporada'},
+ {i:'🍚',t:'Primero',h:'Risotto al radicchio',p:'Radicchio rehogado y mantecado con mantequilla y parmesano. Es el plato más asociado a la ciudad.'},
+ {i:'🥘',t:'Plato antiguo',h:'Sopa coada',p:'"Sopa empollada": capas de pan duro y pichón deshuesado, empapadas en caldo y horneadas despacio hasta quedar casi secas. Viene de la cocina campesina.',w:"Trattoria All'Antico Portico"},
+ {i:'🫘',t:'Cuchara',h:'Pasta e fasoi',p:'Pasta con alubias (borlotti o de Lamon) en un caldo espeso. Según la receta tradicional se sirve con pimienta y radicchio crudo en el fondo del plato.',w:'Osteria Arman'},
+ {i:'🐟',t:'Del río',h:'Risotto al tajo y anguila',p:'Risotto con anguila y cangrejos de río. También se come la anguila guisada con polenta. Es la cocina del Sile.',w:'Osteria Toni del Spin'},
+ {i:'🧀',t:'Bocado de osteria',h:'"Mozza" con acciuga',p:'Mozzarella en carrozza con anchoa, frita y servida con un vaso de spuma (refresco local).',w:'Osteria dalla Gigia'},
+ {i:'🍢',t:'Cicchetti',h:'Nervetti, rane, folpo',p:'Raciones pequeñas tipo tapa: cartílago de ternera aliñado (nervetti), ranas fritas (rane) y pulpo con apio (folpo col seano).',w:'Antica Osteria Al Botegon, junto a Porta San Tomaso',pin:16},
+ {i:'🥮',t:'Dulces de horno',h:'Fregolotta y pinza',p:'La fregolotta es una torta seca de "migas" de masa quebrada. La pinza, de harina de maíz, es el dulce de invierno de las hogueras de Epifanía.',w:'Pinza: Panificio Serafin o alla Moncia'},
+ {i:'🥂',t:'Beber',h:'Prosecco, Raboso, Spritz',p:'Las colinas del Prosecco de Conegliano-Valdobbiadene, Patrimonio UNESCO, están a menos de una hora; en la ciudad se pide como "un\'ombra de bianco". El Raboso del Piave es el tinto local, áspero y con mucha acidez, y va muy bien con platos grasos. El spritz es el aperitivo de todo el Véneto.'},
+ {i:'🥪',t:'Para picar',h:'Goeosesso',p:'Bocadillo caliente de mortadela, mascarpone y gorgonzola, regado con Prosecco. También se puede tomar porchetta con spritz en Antico Pallone.',w:"Muscoli's, en la Pescheria",pin:17},
+ {i:'🍷',t:'Costumbre local',h:"L'ombra e i cicchetti",p:'A media mañana o antes de cenar se va de osteria en osteria con un vaso pequeño de vino y algo de picar. Los alrededores de la Pescheria y de Piazza dei Signori son la zona clásica.'},
+];
+
+const $=id=>document.getElementById(id), ns='http://www.w3.org/2000/svg';
+let cur=0, routeMode=false, rIdx=0, off=new Set();
+
+/* tabs */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.v));
+function tab(v){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));}
+
+/* filtros */
+CATS.forEach(([k,l])=>{const b=document.createElement('button');b.className='chip';b.innerHTML=`<i style="background:${C[k]}"></i>${l}`;
+  b.onclick=()=>{off.has(k)?off.delete(k):off.add(k);b.classList.toggle('off');applyFilter();};$('filters').appendChild(b);});
+function visible(){return P.filter(p=>!off.has(p.k));}
+function applyFilter(){document.querySelectorAll('.pin').forEach(e=>e.classList.toggle('hide',off.has(P[+e.dataset.i].k)));
+  if(off.has(P[cur].k)&&!routeMode){const v=visible();if(v.length)show(P.indexOf(v[0]));}updCount();}
+
+/* pins */
+P.forEach((p,i)=>{const a=document.createElementNS(ns,'g');a.setAttribute('class','pin');a.dataset.i=i;
+  a.innerHTML=`<circle class="halo" cx="${p.x}" cy="${p.y}" r="23"/><circle cx="${p.x}" cy="${p.y}" r="15" fill="${C[p.k]}" stroke="#2b2118" stroke-width="1.5"/><text class="n" x="${p.x}" y="${p.y+5}" text-anchor="middle">${p.n}</text><text class="lbl" x="${p.x+p.lx}" y="${p.y+p.ly}">${p.t}</text>`;
+  a.onclick=()=>{if(routeMode)toggleRoute(false);show(i);};$('pins').appendChild(a);});
+
+function show(i){cur=i;const p=P[i];
+  document.querySelectorAll('.pin').forEach(e=>e.classList.toggle('active',+e.dataset.i===i));
+  const tag=CATS.find(c=>c[0]===p.k)[1];
+  $('card').innerHTML=`<div class="num" style="color:${C[p.k]}">${p.n}</div><div class="tag">${tag} · ${p.g}</div><h2>${p.t}</h2><p>${p.d}</p>${p.tip?`<div class="tip">${p.tip}</div>`:''}${p.food!=null?`<button class="btn go" onclick="tab('vFood');showF(${p.food})">Ver en gastronomía →</button>`:''}`;
+  updCount();}
+function updCount(){$('count').textContent=routeMode?`Parada ${rIdx+1} de ${ROUTE.length}`:`${P[cur].n} de ${P.length}`;}
+function step(d){
+  if(routeMode){rIdx=(rIdx+d+ROUTE.length)%ROUTE.length;show(ROUTE[rIdx]-1);return;}
+  const v=visible();if(!v.length)return;let j=v.indexOf(P[cur]);j=(j+d+v.length)%v.length;show(P.indexOf(v[j]));}
+$('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
+document.addEventListener('keydown',e=>{if($('vMap').classList.contains('on')){if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);}
+  else{if(e.key==='ArrowRight')showF((fcur+1)%F.length);if(e.key==='ArrowLeft')showF((fcur-1+F.length)%F.length);}});
+
+/* ruta */
+$('route').setAttribute('points',ROUTE.map(n=>{const p=P[n-1];return p.x+','+p.y}).join(' '));
+function toggleRoute(on){routeMode=on;$('route').classList.toggle('on',on);$('routebar').classList.toggle('on',on);
+  $('routeBtn').textContent=on?'Salir de la ruta':'Ruta de medio día';if(on){rIdx=0;show(ROUTE[0]-1);}else updCount();}
+$('routeBtn').onclick=()=>toggleRoute(!routeMode);
+
+/* gastronomía */
+let fcur=0;
+F.forEach((f,i)=>{const b=document.createElement('button');b.className='tile'+(f.s?' star':'');
+  b.innerHTML=`<span class="ico">${f.i}</span><div><div class="t">${f.t}</div><h3>${f.h}</h3></div>`;b.onclick=()=>showF(i);$('foodgrid').appendChild(b);});
+function showF(i){fcur=i;const f=F[i];
+  document.querySelectorAll('.tile').forEach((t,j)=>t.classList.toggle('on',j===i));
+  $('fcard').innerHTML=`<div class="num" style="font-size:40px">${f.i}</div><div class="tag f">${f.t}</div><h2>${f.h}</h2><p>${f.p}</p>${f.w?`<div class="where">Dónde: ${f.w}</div>`:''}${f.pin?`<button class="btn go" onclick="tab('vMap');show(${f.pin-1})">Ver en el mapa →</button>`:''}
+  <div class="src">Fuentes: <a href="https://www.trevisotoday.it/social/piatti-tipici-dove-trovarli-treviso-e-provincia.html" target="_blank" rel="noopener">TrevisoToday</a> · <a href="https://www.cibotoday.it/dove-mangiare/bar-pasticcerie-gelaterie/tiramisu-le-beccherie-treviso.html" target="_blank" rel="noopener">CiboToday</a> · <a href="https://souvenirdiviaggio.it/5-piatti-tipici-di-treviso-imperdibili/" target="_blank" rel="noopener">Souvenir di Viaggio</a>. Confirma horarios antes de ir.</div>`;}
+
+show(0);showF(0);
+</script>
+</body>
+</html>

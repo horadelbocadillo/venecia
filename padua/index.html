@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Padua imprescindible: mapa y gastronomía</title>
+<style>
+  :root{
+    --paper:#f4ecdc;
+    --paper2:#ede2cc;
+    --ink:#2b1d14;
+    --muted:#7a6250;
+    --brick:#b4462b;
+    --ochre:#d39a2e;
+    --green:#5d7a4a;
+    --blue:#3f6b84;
+    --plum:#7b3f5e;
+    --line:rgba(43,29,20,.18);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:"Avenir Next","Gill Sans","Trebuchet MS",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif)}
+  body{
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(211,154,46,.10), transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(180,70,43,.08), transparent 45%);
+    padding-bottom:64px;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 0}
+  header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid var(--ink);padding-bottom:14px}
+  .kicker{font-family:var(--sans);letter-spacing:.22em;text-transform:uppercase;font-size:11px;color:var(--brick)}
+  h1{font-size:clamp(38px,6vw,72px);line-height:.92;margin:6px 0 0;font-weight:400;letter-spacing:-.02em}
+  h1 em{color:var(--brick);font-style:italic}
+  .stamp{font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:.14em;border:1.5px solid var(--brick);color:var(--brick);padding:8px 12px;transform:rotate(-3deg);white-space:nowrap;text-align:center;line-height:1.5}
+  .alert{margin:16px 0 0;font-family:var(--sans);font-size:13px;background:rgba(180,70,43,.1);border-left:3px solid var(--brick);padding:10px 14px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px;font-family:var(--sans);font-size:12px}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(255,255,255,.4);padding:6px 11px;border-radius:999px;cursor:pointer;user-select:none;transition:.2s}
+  .chip .dot{width:10px;height:10px;border-radius:50%}
+  .chip.off{opacity:.35}
+  .chip.route{border-style:dashed}
+  .grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;align-items:start}
+  .mapcard{position:relative;min-width:0;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:6px 6px 0 rgba(43,29,20,.12)}
+  .mapcard svg{display:block;width:100%;height:auto}
+  .compass{position:absolute;top:12px;right:14px;font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center}
+  .note{font-family:var(--sans);font-size:11px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line)}
+  .pin{cursor:pointer}
+  .pin circle.bg{transition:r .2s}
+  .pin:hover circle.bg,.pin.active circle.bg{r:15}
+  .pin text.n{font-family:var(--sans);font-size:11px;fill:#fff;pointer-events:none;font-weight:600}
+  .pin text.lbl{font-family:var(--serif);font-size:12.5px;fill:var(--ink);pointer-events:none;paint-order:stroke;stroke:var(--paper2);stroke-width:4px;stroke-linejoin:round}
+  .pin.dim{opacity:.18}
+  .side{min-width:0;position:sticky;top:16px}
+  .detail{background:#fffaf0;border:1.5px solid var(--ink);padding:22px 24px;min-height:240px;box-shadow:6px 6px 0 rgba(43,29,20,.12)}
+  .detail .cat{font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .detail h2{font-weight:400;font-size:30px;margin:6px 0 4px;line-height:1.05}
+  .detail .meta{font-family:var(--sans);font-size:12px;color:var(--muted);margin-bottom:12px}
+  .detail p{font-size:16px;line-height:1.5;margin:0 0 10px}
+  .detail .tip{font-family:var(--sans);font-size:13px;background:rgba(211,154,46,.16);padding:8px 10px;margin-top:10px}
+  .detail a{color:var(--brick)}
+  .nav{display:flex;justify-content:space-between;margin-top:14px;font-family:var(--sans);font-size:12px}
+  .nav button{font:inherit;background:none;border:1px solid var(--ink);padding:6px 12px;cursor:pointer;color:var(--ink)}
+  .nav button:hover{background:var(--ink);color:var(--paper)}
+  .list{margin-top:18px;font-family:var(--sans);font-size:13px;columns:2;column-gap:18px}
+  .list div{break-inside:avoid;padding:4px 0;cursor:pointer;border-bottom:1px dotted var(--line)}
+  .list div:hover{color:var(--brick)}
+  .list b{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;text-align:center;color:#fff;font-size:10px;margin-right:6px}
+
+  /* Gastronomía */
+  section.food{margin-top:56px;border-top:2px solid var(--ink);padding-top:18px}
+  section.food h2.big{font-size:clamp(32px,4.5vw,52px);font-weight:400;margin:6px 0 4px;letter-spacing:-.01em}
+  section.food h2.big em{color:var(--brick)}
+  .lede{font-size:18px;line-height:1.5;max-width:760px;margin:6px 0 24px}
+  .menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1.5px solid var(--ink);background:#fffaf0}
+  .course{padding:20px 22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .course:nth-child(3n){border-right:none}
+  .course .tag{font-family:var(--sans);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brick)}
+  .course h3{font-weight:400;font-size:22px;margin:6px 0 6px;font-style:italic}
+  .course p{margin:0;font-size:15px;line-height:1.45}
+  .eat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}
+  .eat div{border-top:3px solid var(--ochre);padding-top:10px;font-size:15px;line-height:1.45}
+  .eat strong{font-family:var(--sans);font-size:12px;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:4px}
+  footer{margin-top:40px;font-family:var(--sans);font-size:11px;color:var(--muted)}
+
+  @media (max-width:900px){
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .side{position:static}
+    .menu,.eat{grid-template-columns:minmax(0,1fr)}
+    .course{border-right:none}
+    .list{columns:1}
+  }
+  @media print{
+    @page{size:A4 portrait;margin:12mm}
+    body{padding-bottom:0}
+    .legend,.nav{display:none}
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .side{position:static}
+    .mapcard,.detail{box-shadow:none}
+    section.food{break-before:page}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="kicker">Cuaderno de viaje · Véneto</div>
+      <h1>Padua <em>imprescindible</em></h1>
+    </div>
+    <div class="stamp">Ruta a pie<br>≈ 3–4 km · 1 día</div>
+  </header>
+
+  <div class="alert"><strong>Ojo con las fechas:</strong> la Capilla de los Scrovegni cierra del 16 al 27 de noviembre por la revisión anual de los frescos. Hay que reservar siempre con antelación en <a href="https://www.cappelladegliscrovegni.it/index.php/it/" target="_blank" rel="noopener">cappelladegliscrovegni.it</a>.</div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="grid">
+    <div class="mapcard">
+      <div class="compass">N<br>↑</div>
+      <svg id="map" viewBox="0 0 560 900" role="img" aria-label="Mapa esquemático del centro de Padua con los lugares imprescindibles"></svg>
+      <div class="note">Esquema orientativo, no a escala exacta. Las posiciones son aproximadas. La línea discontinua es la ruta sugerida de norte a sur, desde la estación hasta Santa Giustina.</div>
+    </div>
+
+    <aside class="side">
+      <div class="detail" id="detail"></div>
+      <div class="list" id="list"></div>
+    </aside>
+  </div>
+
+  <section class="food">
+    <div class="kicker">A la mesa</div>
+    <h2 class="big">Qué comer y beber en <em>Padua</em></h2>
+    <p class="lede">La cocina paduana es cocina de tierra firme véneta: pasta gruesa, aves de corral, embutidos de los Colli Euganei y vinos de las colinas a pocos kilómetros. A eso se suman dos rituales urbanos: el aperitivo en las plazas y el café del Pedrocchi.</p>
+
+    <div class="menu">
+      <div class="course"><span class="tag">Aperitivo</span><h3>Spritz y Aperol</h3><p>El Aperol nació en Padua en 1919, creado por los hermanos Barbieri. Al atardecer, la Piazza delle Erbe y la de los Signori se llenan de spritz acompañados de <em>cicchetti</em>, pequeños bocados.</p></div>
+      <div class="course"><span class="tag">Primero</span><h3>Bigoli all’anatra</h3><p>Es una pasta gruesa y rugosa, hecha con prensa, servida con ragú de pato. La versión «in salsa», con cebolla y anchoa, es la de los días de vigilia.</p></div>
+      <div class="course"><span class="tag">Primero</span><h3>Risotto de temporada</h3><p>En otoño se hace con calabaza o setas, y en primavera con espárragos. En el Véneto el arroz se sirve <em>all’onda</em>, cremoso y casi fluido.</p></div>
+      <div class="course"><span class="tag">Segundo</span><h3>Gallina padovana</h3><p>Es una raza antigua de gallina con un llamativo moño de plumas. Se toma en caldo o hervida con <em>salsa pearà</em>, hecha con pan, tuétano y pimienta.</p></div>
+      <div class="course"><span class="tag">Segundo</span><h3>Bollito misto</h3><p>Es un surtido de carnes hervidas, con <em>pearà</em> o <em>cren</em> (rábano picante). Es el gran plato de domingo de toda la región.</p></div>
+      <div class="course"><span class="tag">De la calle</span><h3>Folpetti</h3><p>Son pulpitos hervidos con aceite, ajo y perejil. Se venden en puestos de las plazas, sobre todo en invierno, y se acompañan con un vaso de vino.</p></div>
+      <div class="course"><span class="tag">Embutido</span><h3>Prosciutto Berico-Euganeo DOP</h3><p>Es el jamón curado de los Colli Euganei y Berici, más dulce que el de Parma. Se encuentra en las tiendas que hay bajo el Salone.</p></div>
+      <div class="course"><span class="tag">Dulce</span><h3>Pazientina y Dolce del Santo</h3><p>La <em>torta pazientina</em> lleva capas de almendra, crema de zabaione y chocolate. El <em>Dolce del Santo</em>, de hojaldre relleno, está reconocido como producto tradicional del Véneto.</p></div>
+      <div class="course"><span class="tag">Café y vino</span><h3>Caffè Pedrocchi · Fior d’Arancio</h3><p>El café del Pedrocchi lleva crema de menta y cacao por encima. Para el vino, prueba los Colli Euganei DOC y el Fior d’Arancio DOCG, un moscatel aromático.</p></div>
+    </div>
+
+    <div class="eat">
+      <div><strong>Mercado</strong>Bajo el Palazzo della Ragione hay un mercado cubierto desde hace casi 800 años, con carnicerías, quesos, pan y vino. Fuera, en la Piazza delle Erbe, se vende fruta y verdura cada mañana.</div>
+      <div><strong>Cuándo</strong>Se come de 12:30 a 14:30 y se cena desde las 19:30. El aperitivo va de las 18:00 a las 20:00, y es cuando la ciudad está más viva.</div>
+      <div><strong>Dónde buscar</strong>Mira las <em>osterie</em> de las callejuelas del gueto y alrededor de las plazas. Los menús más turísticos se concentran junto al Santo.</div>
+    </div>
+  </section>
+
+  <footer>Fuentes: Comune di Padova (Padova Cultura), web oficial de la Cappella degli Scrovegni, Comisión Nacional Italiana para la UNESCO.</footer>
+</div>
+
+<script>
+const CATS = {
+  igl:{name:"Iglesias y frescos", color:"var(--brick)", hex:"#b4462b"},
+  mon:{name:"Monumentos y plazas", color:"var(--blue)", hex:"#3f6b84"},
+  arq:{name:"Arqueología romana", color:"var(--ochre)", hex:"#c38a1e"},
+  sab:{name:"Saber y ciencia", color:"var(--green)", hex:"#5d7a4a"},
+  com:{name:"Comer y beber", color:"var(--plum)", hex:"#7b3f5e"}
+};
+
+const PLACES = [
+  {id:1, cat:"igl", name:"Capilla de los Scrovegni", lat:45.4116, lon:11.8794, side:"r",
+   meta:"Piazza Eremitani 8 · reserva obligatoria",
+   text:"Es el gran ciclo de Giotto, pintado entre 1303 y 1305: la vida de la Virgen y de Cristo, los Vicios y las Virtudes y el Juicio Final, bajo una bóveda azul estrellada. Fue la revolución que llevó el espacio y la emoción humana a la pintura.",
+   tip:"16 € la entrada general, que incluye los Museos Eremitani. La visita dura 15 minutos y no se puede reservar para el mismo día."},
+  {id:2, cat:"arq", name:"Arena romana", lat:45.4124, lon:11.8784, side:"l",
+   meta:"Giardini dell’Arena",
+   text:"Quedan restos del anfiteatro de Patavium, del siglo I d.C. Los Scrovegni construyeron su palacio y su capilla sobre el contorno de la elipse.",
+   tip:"Son jardines públicos y gratuitos. En verano se hace cine al aire libre."},
+  {id:3, cat:"igl", name:"Eremitani y Museos Cívicos", lat:45.4104, lon:11.8804, side:"r",
+   meta:"Piazza Eremitani",
+   text:"La iglesia del siglo XIII quedó destruida en el bombardeo de 1944. En la Capilla Ovetari se salvaron dos escenas de Mantegna. Al lado, el museo tiene una sección arqueológica (vénetos y romanos) y una pinacoteca con obras de Giotto, Tiziano y Tintoretto.",
+   tip:"Ver el museo es la mejor forma de aprovechar la espera antes de entrar a los Scrovegni."},
+  {id:4, cat:"com", name:"Caffè Pedrocchi", lat:45.4078, lon:11.8772, side:"r",
+   meta:"Via VIII Febbraio 15",
+   text:"Es el café «sin puertas», del siglo XIX, porque durante décadas estuvo abierto día y noche. Aquí empezó la revuelta estudiantil contra Austria el 8 de febrero de 1848.",
+   tip:"Pide el «caffè Pedrocchi», con crema de menta y cacao, en la Sala Roja."},
+  {id:5, cat:"sab", name:"Palazzo del Bo", lat:45.4068, lon:11.8776, side:"r",
+   meta:"Universidad · solo con visita guiada",
+   text:"Es la sede histórica de la universidad fundada en 1222. Conserva el Teatro Anatómico de 1594, el primero permanente del mundo, y la cátedra de madera donde enseñó Galileo entre 1592 y 1610.",
+   tip:"Si ves a recién graduados disfrazados recitando un «papiro», es la fiesta de la licenciatura."},
+  {id:6, cat:"mon", name:"Palazzo della Ragione", lat:45.4074, lon:11.8752, side:"l",
+   meta:"Entre Piazza delle Erbe y Piazza della Frutta",
+   text:"Fue el tribunal medieval, empezado en 1218. El «Salone» mide 82 × 27 metros y está cubierto de frescos astrológicos; dentro hay un enorme caballo de madera. En la planta baja funciona un mercado desde hace casi 800 años.",
+   tip:"8 € la entrada. Las dos plazas que lo rodean son el corazón del aperitivo."},
+  {id:7, cat:"mon", name:"Piazza dei Signori", lat:45.4079, lon:11.8730, side:"l",
+   meta:"Torre dell’Orologio",
+   text:"Es la plaza del poder de los Carraresi y después de Venecia. La torre tiene un reloj astronómico de 1344, uno de los primeros de Europa, con el zodíaco en la esfera.",
+   tip:"Busca el detalle curioso: a la esfera le falta el signo de Libra."},
+  {id:8, cat:"igl", name:"Duomo y Baptisterio", lat:45.4067, lon:11.8722, side:"l",
+   meta:"Piazza Duomo",
+   text:"La catedral es renacentista y en su proyecto intervino Miguel Ángel. La joya es el Baptisterio: Giusto de’ Menabuoi pintó hacia 1375–1378 un Paraíso de cientos de figuras en la cúpula.",
+   tip:"El Baptisterio forma parte de la Urbs Picta (UNESCO 2021)."},
+  {id:9, cat:"mon", name:"Gueto judío", lat:45.4064, lon:11.8742, side:"r",
+   meta:"Via San Martino e Solferino",
+   text:"Son callejuelas medievales y porticadas entre las plazas y el Duomo. Hoy están llenas de osterie y pequeñas tiendas.",
+   tip:"Es buena zona para comer a mediodía."},
+  {id:10, cat:"arq", name:"Puente romano de San Lorenzo", lat:45.4052, lon:11.8785, side:"r",
+   meta:"Riviera dei Ponti Romani",
+   text:"Es un puente del siglo I a.C. que hoy queda bajo el nivel de la calle, porque el canal se cubrió en el siglo XX. Padua conserva también el Ponte Molino y el Ponte Altinate.",
+   tip:"Solo se visita en recorridos guiados del Ayuntamiento."},
+  {id:11, cat:"arq", name:"Tumba de Antenor", lat:45.4046, lon:11.8770, side:"l",
+   meta:"Piazza Antenore",
+   text:"La leyenda atribuye la fundación de Padua al troyano Antenor. El sarcófago, colocado aquí en 1283, contiene en realidad restos de un soldado de los siglos II a IV d.C.",
+   tip:"Está a dos pasos de Palazzo Zabarella, que acoge grandes exposiciones temporales."},
+  {id:12, cat:"igl", name:"Basílica de San Antonio", lat:45.4014, lon:11.8808, side:"r",
+   meta:"Piazza del Santo · entrada gratuita",
+   text:"Se empezó en 1232 y mezcla el románico, el gótico y las cúpulas bizantinas. Tiene los bronces de Donatello en el altar, la tumba y las reliquias del santo y tres claustros. Delante está el Gattamelata, la estatua ecuestre de Donatello.",
+   tip:"Al lado están el Oratorio de San Jorge (Altichiero) y la Scuola del Santo (Tiziano). Hay que ir con ropa adecuada."},
+  {id:13, cat:"sab", name:"Jardín Botánico", lat:45.3992, lon:11.8812, side:"r",
+   meta:"Via Orto Botanico 15 · UNESCO 1997",
+   text:"Es de 1545 y es el jardín botánico universitario más antiguo del mundo en su ubicación original. Conserva la «palmera de Goethe», de 1585, y tiene invernaderos modernos con los climas del planeta.",
+   tip:"Es un respiro verde entre el Santo y el Prato."},
+  {id:14, cat:"mon", name:"Prato della Valle", lat:45.3983, lon:11.8763, side:"l",
+   meta:"88.620 m²",
+   text:"Es una de las plazas más grandes de Europa, creada en 1775 por Andrea Memmo sobre un antiguo pantano. Tiene una isla elíptica rodeada por un canal y 78 estatuas.",
+   tip:"Los sábados hay mercado y el tercer domingo de cada mes, antigüedades."},
+  {id:15, cat:"igl", name:"Santa Giustina", lat:45.3962, lon:11.8790, side:"r",
+   meta:"Abadía benedictina",
+   text:"Es la iglesia más grande de Padua: una basílica del siglo XVI con ocho cúpulas y la fachada sin terminar. Guarda el Martirio de Santa Justina del Veronés (1575) y claustros que se pueden visitar.",
+   tip:"Por dentro es enorme y fresca, ideal para cerrar la ruta."},
+  {id:16, cat:"sab", name:"La Specola", lat:45.4022, lon:11.8687, side:"r",
+   meta:"Observatorio · desvío opcional",
+   text:"Es un observatorio astronómico del siglo XVIII construido sobre la torre del castillo medieval de Ezzelino III, junto al río.",
+   tip:"Vale la pena si te sobra media tarde."}
+];
+
+const ROUTE = [1,2,3,4,5,6,9,7,8,10,11,12,13,15,14];
+
+// Proyección simple (lat/lon → px)
+const LON0=11.8655, LAT0=45.4195, S=300; // px por km
+const px = lon => (lon-LON0)*78.2*S + 20;
+const py = lat => (LAT0-lat)*111.2*S + 40;
+
+const svg = document.getElementById('map');
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={},p=svg)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;};
+
+// Fondo: rejilla tipo cuaderno
+const defs = el('defs');
+const pat = el('pattern',{id:'grid',width:28,height:28,patternUnits:'userSpaceOnUse'},defs);
+el('path',{d:'M28 0H0V28',fill:'none',stroke:'rgba(43,29,20,.07)','stroke-width':1},pat);
+el('rect',{x:0,y:0,width:560,height:900,fill:'url(#grid)'});
+
+// Estación (punto de llegada)
+const stX=px(11.8806), stY=py(45.4176);
+
+// Prato della Valle: elipse aproximada
+el('ellipse',{cx:px(11.8763),cy:py(45.3983),rx:62,ry:44,fill:'rgba(93,122,74,.16)',stroke:'rgba(63,107,132,.55)','stroke-width':2.5});
+el('ellipse',{cx:px(11.8763),cy:py(45.3983),rx:48,ry:32,fill:'rgba(93,122,74,.22)',stroke:'none'});
+
+// Zonas suaves de contexto
+el('rect',{x:px(11.8722)-30,y:py(45.4082)-18,width:px(11.8778)-px(11.8722)+60,height:py(45.4062)-py(45.4082)+36,rx:14,fill:'rgba(211,154,46,.10)',stroke:'rgba(211,154,46,.35)','stroke-dasharray':'3 4'});
+const zt=el('text',{x:px(11.8722)-24,y:py(45.4082)-24,'font-family':'Avenir Next, Gill Sans, sans-serif','font-size':10,'letter-spacing':'2',fill:'#9a7a3a'});zt.textContent='CENTRO MEDIEVAL · PLAZAS';
+
+// Ruta sugerida
+const byId=Object.fromEntries(PLACES.map(p=>[p.id,p]));
+let d=`M${stX},${stY} `+ROUTE.map(i=>`L${px(byId[i].lon)},${py(byId[i].lat)}`).join(' ');
+const route=el('path',{d,fill:'none',stroke:'rgba(43,29,20,.55)','stroke-width':2,'stroke-dasharray':'2 6','stroke-linecap':'round'});
+
+// Estación
+const st=el('g');
+el('rect',{x:stX-7,y:stY-7,width:14,height:14,fill:'#2b1d14'},st);
+const stt=el('text',{x:stX+12,y:stY+4,'font-family':'Avenir Next, Gill Sans, sans-serif','font-size':11,fill:'#2b1d14'},st);stt.textContent='Estación de tren';
+
+// Pins
+const pins={};
+PLACES.forEach(p=>{
+  const g=el('g',{class:'pin',tabindex:0,'data-id':p.id});
+  const x=px(p.lon), y=py(p.lat);
+  el('circle',{class:'bg',cx:x,cy:y,r:12,fill:CATS[p.cat].hex,stroke:'#fffaf0','stroke-width':2.5},g);
+  const n=el('text',{class:'n',x:x,y:y+4,'text-anchor':'middle'},g);n.textContent=p.id;
+  const l=el('text',{class:'lbl',x:p.side==='l'?x-18:x+18,y:y+4,'text-anchor':p.side==='l'?'end':'start'},g);l.textContent=p.name;
+  g.addEventListener('click',()=>show(p.id));
+  g.addEventListener('keydown',e=>{if(e.key==='Enter')show(p.id)});
+  pins[p.id]=g;
+});
+
+// Escala
+const s0=20, sy=880;
+el('line',{x1:s0,y1:sy,x2:s0+S*0.25,y2:sy,stroke:'#2b1d14','stroke-width':2});
+el('line',{x1:s0,y1:sy-5,x2:s0,y2:sy+5,stroke:'#2b1d14','stroke-width':2});
+el('line',{x1:s0+S*0.25,y1:sy-5,x2:s0+S*0.25,y2:sy+5,stroke:'#2b1d14','stroke-width':2});
+const sc=el('text',{x:s0+S*0.25+8,y:sy+4,'font-family':'Avenir Next, Gill Sans, sans-serif','font-size':11,fill:'#2b1d14'});sc.textContent='250 m';
+
+// Leyenda con filtros
+const active=new Set(Object.keys(CATS));
+const legend=document.getElementById('legend');
+Object.entries(CATS).forEach(([k,c])=>{
+  const b=document.createElement('span');b.className='chip';
+  b.innerHTML=`<span class="dot" style="background:${c.hex}"></span>${c.name}`;
+  b.onclick=()=>{active.has(k)?active.delete(k):active.add(k);b.classList.toggle('off');applyFilter();};
+  legend.appendChild(b);
+});
+const rb=document.createElement('span');rb.className='chip route';rb.innerHTML='┈ Ruta sugerida';
+rb.onclick=()=>{rb.classList.toggle('off');route.style.display=rb.classList.contains('off')?'none':'';};
+legend.appendChild(rb);
+function applyFilter(){PLACES.forEach(p=>pins[p.id].classList.toggle('dim',!active.has(p.cat)));}
+
+// Lista
+const list=document.getElementById('list');
+PLACES.forEach(p=>{
+  const d=document.createElement('div');
+  d.innerHTML=`<b style="background:${CATS[p.cat].hex}">${p.id}</b>${p.name}`;
+  d.onclick=()=>show(p.id);
+  list.appendChild(d);
+});
+
+// Detalle
+const detail=document.getElementById('detail');
+let current=1;
+function show(id){
+  current=id;const p=byId[id];
+  Object.values(pins).forEach(g=>g.classList.remove('active'));pins[id].classList.add('active');
+  detail.innerHTML=`
+    <div class="cat" style="color:${CATS[p.cat].hex}">${p.id} · ${CATS[p.cat].name}</div>
+    <h2>${p.name}</h2>
+    <div class="meta">${p.meta}</div>
+    <p>${p.text}</p>
+    <div class="tip">${p.tip}</div>
+    <div class="nav"><button id="prev">← Anterior</button><button id="next">Siguiente →</button></div>`;
+  const ids=PLACES.map(x=>x.id), i=ids.indexOf(id);
+  document.getElementById('prev').onclick=()=>show(ids[(i-1+ids.length)%ids.length]);
+  document.getElementById('next').onclick=()=>show(ids[(i+1)%ids.length]);
+}
+show(1);
+</script>
+</body>
+</html>

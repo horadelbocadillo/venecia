@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Venecia: sitios imprescindibles</title>
+<style>
+  :root{
+    --paper:#f4ecdc; --paper2:#efe4cf; --ink:#2b2219; --muted:#7a6a55;
+    --water:#bcd3cc; --water-deep:#9fbfb6; --land:#f8f1e3; --line:#c9b89a;
+    --c-iglesia:#a8392b; --c-palacio:#b9802a; --c-arqueo:#5b6b2f; --c-comer:#7a3e6b; --c-llegada:#2f5d73;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:"Avenir Next","Gill Sans","Trebuchet MS",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif)}
+  body{background-image:radial-gradient(rgba(120,90,50,.06) 1px,transparent 1px);background-size:5px 5px;padding:28px 28px 72px}
+  header{max-width:1320px;margin:0 auto 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1.5px solid var(--ink);padding-bottom:14px}
+  h1{font-size:clamp(30px,4.4vw,54px);font-weight:400;margin:0;letter-spacing:-.01em;line-height:1}
+  h1 em{color:var(--c-iglesia)}
+  .sub{font-family:var(--sans);font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:8px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-family:var(--sans);font-size:13px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:6px 12px 6px 10px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
+  .controls{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+  .modes{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden}
+  .mode{font-family:var(--sans);font-size:14px;background:transparent;border:0;padding:8px 16px;cursor:pointer;color:var(--ink);border-right:1.5px solid var(--ink)}
+  .mode:last-child{border-right:0}
+  .mode.on{background:var(--ink);color:var(--paper)}
+  .chips.gone{display:none}
+  .detail .time{font-family:var(--serif);font-size:40px;line-height:1;color:var(--c-iglesia);float:left;margin:2px 16px 4px 0}
+  .detail ul{margin:6px 0 10px;padding-left:18px;font-size:15.5px;line-height:1.45}
+  .detail a{color:var(--c-llegada)}
+  .stepnav{display:flex;gap:8px;margin-top:12px;clear:both}
+  .stepnav button{font-family:var(--sans);font-size:13px;border:1.5px solid var(--ink);background:transparent;padding:5px 12px;border-radius:999px;cursor:pointer}
+  .list li .t{font-family:var(--sans);font-size:12px;color:var(--muted);margin-left:auto;padding-left:8px}
+  .rpath{fill:none;stroke-width:3.5;stroke-dasharray:2 9;stroke-linecap:round}
+  .rpath.out{stroke-dasharray:6 6;opacity:.8}
+  .rpin{cursor:pointer;animation:drop .45s cubic-bezier(.2,.9,.3,1.3) both}
+  .rpin circle{stroke:#fff;stroke-width:2.5}
+  .rpin text.n{font-family:var(--sans);font-size:13px;fill:#fff;font-weight:600;pointer-events:none}
+  .rpin text.lb{font-family:var(--serif);font-size:15px;fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:4px;stroke-linejoin:round;pointer-events:none;opacity:0;transition:opacity .15s}
+  .rpin:hover text.lb,.rpin.active text.lb,.rpin.out text.lb{opacity:1}
+  @media print{.rpin text.lb{opacity:1;font-size:12px}}
+  .rpin.active circle{r:19}
+  .chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .chip.off{opacity:.35}
+  .chip:hover{transform:translateY(-1px)}
+  .layout{max-width:1320px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px}
+  .mapcard{min-width:0;background:var(--land);border:1.5px solid var(--ink);position:relative;overflow:hidden}
+  .mapcard svg{display:block;width:100%;height:auto}
+  .compass{position:absolute;top:14px;right:16px;font-family:var(--sans);font-size:11px;color:var(--muted);text-align:center;letter-spacing:.1em}
+  .note{position:absolute;left:14px;bottom:10px;font-family:var(--sans);font-size:11px;color:var(--muted)}
+  .pin{cursor:pointer}
+  .pin circle.dot{stroke:#fff;stroke-width:2.5;transition:r .15s}
+  .pin text{font-family:var(--sans);font-size:12px;fill:#fff;font-weight:600;pointer-events:none}
+  .pin .lbl{font-family:var(--serif);font-size:15px;fill:var(--ink);font-weight:400;paint-order:stroke;stroke:var(--land);stroke-width:4px;stroke-linejoin:round;opacity:0;transition:opacity .15s}
+  .pin:hover .lbl,.pin.active .lbl{opacity:1}
+  .pin.active circle.dot{r:17}
+  .pin.hidden{display:none}
+  .halo{fill:none;stroke-width:2;opacity:0}
+  .pin.active .halo{opacity:.5}
+  .leftcol{min-width:0;display:flex;flex-direction:column;gap:18px}
+  aside{min-width:0;display:flex;flex-direction:column;gap:18px}
+  .detail{background:var(--paper2);border:1.5px solid var(--ink);padding:20px 24px;min-height:170px}
+  .detail .cat{font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .detail h2{font-weight:400;font-size:28px;margin:6px 0 10px;line-height:1.1}
+  .detail p{margin:0 0 10px;font-size:16px;line-height:1.45}
+  .detail .tip{font-family:var(--sans);font-size:13px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+  .list{background:var(--land);border:1.5px solid var(--ink);padding:14px 16px;max-height:560px;overflow:auto}
+  .list h3,.inset h3{font-family:var(--sans);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;color:var(--muted);font-weight:500}
+  .list ol{list-style:none;margin:0;padding:0}
+  .list li{display:flex;gap:10px;align-items:center;padding:6px 4px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);font-size:15px}
+  .list li:hover,.list li.active{background:rgba(168,57,43,.07)}
+  .list li.hidden{display:none}
+  .num{flex:0 0 24px;height:24px;border-radius:50%;color:#fff;font-family:var(--sans);font-size:11px;display:grid;place-items:center;font-weight:600}
+  .inset{background:var(--land);border:1.5px solid var(--ink);padding:14px 16px}
+  .inset svg{width:100%;height:auto;display:block}
+  .inset p{font-family:var(--sans);font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.45}
+  @keyframes drop{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+  .pin{animation:drop .45s cubic-bezier(.2,.9,.3,1.3) both}
+  @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}body{padding:18px 14px 72px}}
+  @media print{
+    @page{size:A4 landscape;margin:10mm}
+    body{padding:0;background-image:none}
+    .layout{grid-template-columns:minmax(0,1fr) 300px}
+    .list{max-height:none;overflow:visible}
+    .pin .lbl{opacity:1;font-size:12px}
+    .chips{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Venecia, <em>imprescindible</em></h1>
+    <div class="sub">Mapa esquemático · elige un día para ver la ruta, o toca un número</div>
+  </div>
+  <div class="controls">
+    <div class="modes" id="modes">
+      <button class="mode on" data-m="all">Todos los sitios</button>
+      <button class="mode" data-m="jue">Jueves 26</button>
+      <button class="mode" data-m="vie">Viernes 27</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="leftcol">
+  <div class="mapcard">
+    <div class="compass">N<br>↑</div>
+    <svg id="map" viewBox="0 0 1000 880" role="img" aria-label="Mapa esquemático de Venecia con los sitios imprescindibles">
+      <defs>
+        <pattern id="waves" width="22" height="10" patternUnits="userSpaceOnUse">
+          <path d="M0 6 Q5.5 2 11 6 T22 6" fill="none" stroke="#a9c6be" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="1000" height="880" fill="#bcd3cc"/>
+      <rect width="1000" height="880" fill="url(#waves)" opacity=".7"/>
+
+      <!-- puente de la Libertà y ferrocarril -->
+      <path d="M0 300 L120 320" stroke="#8a7a62" stroke-width="7" stroke-dasharray="2 5"/>
+      <text x="8" y="288" font-family="Avenir Next, Gill Sans, Trebuchet MS, sans-serif" font-size="12" fill="#5d7d74" letter-spacing="1">← MESTRE · TREVISO</text>
+
+      <!-- isla principal -->
+      <path d="M70 395 C 80 330, 140 290, 200 250 C 260 205, 320 160, 420 148 C 500 140, 560 160, 640 215 C 720 270, 800 320, 880 375 C 940 415, 985 455, 975 505 C 965 550, 900 568, 820 570 C 740 572, 680 560, 620 562 C 585 563, 565 570, 550 585 C 535 610, 528 632, 505 650 C 470 668, 400 674, 320 672 C 240 670, 170 655, 120 615 C 80 580, 62 470, 70 395 Z"
+            fill="#f8f1e3" stroke="#2b2219" stroke-width="1.6"/>
+
+      <!-- Gran Canal -->
+      <path d="M118 405 C 200 335, 330 300, 420 318 C 480 330, 505 370, 498 418 C 490 470, 410 500, 340 518 C 285 535, 290 600, 360 612 C 420 622, 470 628, 525 642"
+            fill="none" stroke="#9fbfb6" stroke-width="15" stroke-linecap="round"/>
+      <path d="M118 405 C 200 335, 330 300, 420 318 C 480 330, 505 370, 498 418 C 490 470, 410 500, 340 518 C 285 535, 290 600, 360 612 C 420 622, 470 628, 525 642"
+            fill="none" stroke="#bcd3cc" stroke-width="10" stroke-linecap="round"/>
+      <text font-family="Iowan Old Style, Palatino, Georgia, serif" font-style="italic" font-size="15" fill="#5d7d74"><textPath href="#gc" startOffset="12%">Canal Grande</textPath></text>
+      <path id="gc" d="M118 395 C 200 325, 330 290, 420 308" fill="none"/>
+
+      <!-- Giudecca y San Giorgio -->
+      <path d="M150 760 C 260 745, 420 735, 555 732 C 580 740, 585 768, 560 790 C 470 812, 300 822, 170 822 C 140 812, 135 772, 150 760 Z" fill="#f8f1e3" stroke="#2b2219" stroke-width="1.4"/>
+      <ellipse cx="652" cy="694" rx="44" ry="26" fill="#f8f1e3" stroke="#2b2219" stroke-width="1.4"/>
+      <text x="380" y="704" font-family="Iowan Old Style, Palatino, Georgia, serif" font-style="italic" font-size="14" fill="#5d7d74">Canale della Giudecca</text>
+      <text x="740" y="640" font-family="Iowan Old Style, Palatino, Georgia, serif" font-style="italic" font-size="14" fill="#5d7d74">Bacino di San Marco</text>
+
+      <!-- barrios -->
+      <g font-family="Avenir Next, Gill Sans, Trebuchet MS, sans-serif" font-size="12" fill="#a3927a" letter-spacing="3">
+        <text x="300" y="268">CANNAREGIO</text>
+        <text x="745" y="455">CASTELLO</text>
+        <text x="560" y="470">S. MARCO</text>
+        <text x="195" y="470">S. POLO · S. CROCE</text>
+        <text x="180" y="615">DORSODURO</text>
+        <text x="230" y="800">GIUDECCA</text>
+      </g>
+
+      <g id="route"></g>
+      <g id="pins"></g>
+    </svg>
+    <div class="note">Esquema aproximado, no a escala exacta. Para orientarte en la calle, usa el GPS.</div>
+  </div>
+  <div class="detail" id="detail">
+      <div class="cat" style="color:var(--c-llegada)">Empieza aquí</div>
+      <h2>Llegas en tren a Santa Lucia</h2>
+      <p>Desde Treviso, 31–42 minutos en tren regional. Al salir de la estación ya estás sobre el Canal Grande: la línea 1 del vaporetto lo recorre entero hasta San Marcos.</p>
+      <p><strong>Billete de vaporetto:</strong> 9,50 € por 75 minutos, o pases de 24 h (25 €), 48 h (35 €) y 72 h (45 €). Cómpralo en la app AVM Venezia Official, en las taquillas Venezia Unica de la parada Ferrovia o Piazzale Roma, o paga acercando tu tarjeta bancaria al validador del embarcadero.</p>
+      <p class="tip">Toca cualquier número del mapa o de la lista para ver aquí su explicación.</p>
+  </div>
+  </div>
+
+  <aside>
+    <div class="list"><h3 id="listTitle">Los sitios</h3><ol id="list"></ol><ol id="rlist" style="display:none"></ol></div>
+    <div class="inset">
+      <h3>La laguna y el camino desde Treviso</h3>
+      <svg viewBox="0 0 330 330" id="inset">
+        <!-- laguna -->
+        <rect width="330" height="330" fill="#bcd3cc"/>
+        <!-- mar Adriático, al otro lado del Lido y Cavallino -->
+        <path d="M150 330 C 185 300, 215 270, 240 255 C 270 238, 300 215, 330 196 V330 Z" fill="#9fbfb6"/>
+        <text x="262" y="300" font-family="Iowan Old Style, Palatino, Georgia, serif" font-style="italic" font-size="12" fill="#3f6158">Adriático</text>
+        <!-- franja del Lido y península de Cavallino -->
+        <path d="M150 330 C 185 300, 215 270, 240 255 M258 246 C 285 230, 305 212, 330 196" fill="none" stroke="#efe4cf" stroke-width="8" stroke-linecap="round"/>
+        <!-- tierra firme -->
+        <path d="M0 0 H330 V58 C 312 52, 296 48, 280 50 C 258 56, 240 66, 224 80 C 208 96, 196 110, 182 120 C 170 128, 162 134, 154 140 C 136 156, 124 172, 112 180 C 96 188, 82 192, 70 190 C 46 184, 22 172, 0 162 Z" fill="#efe4cf" stroke="#b9a684" stroke-width="1.2"/>
+        <!-- ferrocarril Treviso - Mestre - Venecia y puente de la Libertà -->
+        <path d="M14 22 L 30 138 L 76 192 L 142 236" fill="none" stroke="#2f5d73" stroke-width="2.5" stroke-dasharray="4 3"/>
+        <g font-family="Avenir Next, Gill Sans, Trebuchet MS, sans-serif" font-size="11" fill="#2b2219">
+          <circle cx="14" cy="22" r="5" fill="#2f5d73" stroke="#fff" stroke-width="1.5"/><text x="24" y="20">Treviso</text><text x="24" y="33" font-size="9.5" fill="#7a6a55">30 km, tren 31–42 min</text>
+          <circle cx="30" cy="138" r="4" fill="#2b2219"/><text x="38" y="142">Mestre</text>
+          <text x="66" y="225" font-size="9.5" fill="#3f6158" transform="rotate(33 66 225)">puente de la Libertà</text>
+          <circle cx="186" cy="110" r="3" fill="#2b2219"/><text x="118" y="104">✈ Marco Polo</text>
+          <circle cx="252" cy="30" r="6" fill="#5b6b2f" stroke="#fff" stroke-width="1.5"/><text x="243" y="50" text-anchor="end">Altino (Altinum)</text>
+          <!-- islas -->
+          <path d="M142 236 C 160 228, 180 240, 178 254 C 174 266, 152 268, 144 256 C 138 248, 138 240, 142 236 Z" fill="#f8f1e3" stroke="#2b2219"/>
+          <text x="96" y="276" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="14">Venecia</text>
+          <ellipse cx="186" cy="204" rx="9" ry="6" fill="#f8f1e3" stroke="#2b2219"/><text x="198" y="208">Murano</text>
+          <ellipse cx="276" cy="149" rx="7" ry="5" fill="#f8f1e3" stroke="#2b2219"/><text x="236" y="170">Burano</text>
+          <ellipse cx="277" cy="124" rx="7" ry="5" fill="#5b6b2f" stroke="#2b2219"/><text x="288" y="128">Torcello</text>
+          <text x="192" y="286" transform="rotate(-40 192 286)">Lido</text>
+        </g>
+      </svg>
+      <p><strong style="color:var(--ink)">Tren</strong>: Treviso → Mestre → puente de la Libertà → Santa Lucia, sin transbordo. <strong style="color:var(--ink)">Murano</strong>: vaporetto 4.1/4.2 desde Fondamente Nove, unos 10 min. <strong style="color:var(--ink)">Burano</strong>: línea 12, unos 45 min; de ahí a <strong style="color:var(--ink)">Torcello</strong> hay 5 min en barco. <strong style="color:var(--ink)">Altino</strong> está en tierra firme; en transporte público, el tren a Quarto d'Altino (línea Venecia–Trieste) te deja a unos 3–4 km del yacimiento.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+const CATS = {
+  llegada:{n:"Llegada", c:"#2f5d73"},
+  iglesia:{n:"Iglesias", c:"#a8392b"},
+  palacio:{n:"Palacios y monumentos", c:"#b9802a"},
+  arqueo:{n:"Antigüedad y arqueología", c:"#5b6b2f"},
+  comer:{n:"Comer y beber", c:"#7a3e6b"}
+};
+const P = [
+  {cat:"llegada", x:188,y:327, t:"Estación de Santa Lucia", d:"Aquí llega el tren directo desde Treviso Centrale. Frente a la puerta tienes el Canal Grande y el puente de los Descalzos.", tip:"Pasa el vaporetto de la línea 1 (lenta, para ver palacios) o la 2 (más rápida)."},
+  {cat:"llegada", x:136,y:417, t:"Piazzale Roma", d:"Terminal de autobuses y coches. Aquí te deja el ATVO desde el aeropuerto de Treviso (unos 70 minutos).", tip:"El puente de Calatrava une Piazzale Roma con la estación."},
+  {cat:"iglesia", x:578,y:515, t:"Basílica de San Marcos", d:"Iglesia de los dux, de planta bizantina con cinco cúpulas y unos 8.000 m² de mosaicos dorados. No te pierdas la Pala d'Oro, la terraza y el museo.", tip:"Reserva hora online. Hombros cubiertos y sin mochilas grandes."},
+  {cat:"palacio", x:600,y:548, t:"Palacio Ducal y Puente de los Suspiros", d:"Sede del gobierno de la República. En la Sala del Maggior Consiglio está el Paraíso de Tintoretto; desde dentro cruzas el Puente de los Suspiros hacia las prisiones.", tip:"El tour \"Itinerarios Secretos\" enseña la celda de Casanova."},
+  {cat:"arqueo", x:543,y:540, t:"Museo Arqueológico, Tetrarcas y caballos", d:"El Museo Arqueológico Nacional, dentro del recorrido del Correr, guarda escultura griega y romana. En la esquina de la basílica están los Tetrarcas en pórfido (s. IV), y en su museo los caballos de bronce traídos de Constantinopla en 1204.", tip:"Mira también los Pilares de Acre, junto al Palacio Ducal."},
+  {cat:"palacio", x:499,y:417, t:"Puente de Rialto", d:"El puente de piedra de 1591, el más antiguo del Canal Grande y el corazón comercial de la ciudad.", tip:"Al amanecer está casi vacío."},
+  {cat:"comer", x:458,y:384, t:"Mercado de Rialto y bácaros", d:"Mercado de pescado y verdura (el de pescado, de martes a sábado por la mañana) y alrededor las tabernas clásicas como Cantina Do Mori o All'Arco, para tapear cicchetti con una ombra.", tip:"Prueba baccalà mantecato y sarde in saor."},
+  {cat:"iglesia", x:299,y:446, t:"Basílica dei Frari", d:"Gran iglesia gótica franciscana con la Asunción de Tiziano en el altar mayor y la tumba del pintor.", tip:"Entrada de pago; merece la pena."},
+  {cat:"palacio", x:270,y:470, t:"Scuola Grande di San Rocco", d:"Más de 50 lienzos de Tintoretto cubren paredes y techos; muchos la llaman la \"Capilla Sixtina\" de Venecia.", tip:"Usa los espejos que prestan para ver el techo sin forzar el cuello."},
+  {cat:"iglesia", x:616,y:372, t:"Santi Giovanni e Paolo", d:"\"San Zanipolo\", la gran iglesia dominica y panteón de 25 dux. En la plaza, la estatua ecuestre del Colleoni de Verrocchio.", tip:""},
+  {cat:"iglesia", x:578,y:405, t:"Santa Maria dei Miracoli", d:"Pequeña iglesia del Renacimiento temprano revestida de mármoles de colores: un auténtico joyero.", tip:""},
+  {cat:"iglesia", x:472,y:625, t:"Santa Maria della Salute", d:"Basílica barroca de Longhena, levantada como voto tras la peste de 1630, en la entrada del Canal Grande.", tip:"El 21 de noviembre se celebra la Festa della Salute, con puente de barcas."},
+  {cat:"palacio", x:512,y:648, t:"Punta della Dogana", d:"Antigua aduana marítima en la punta de Dorsoduro, hoy museo de arte contemporáneo (colección Pinault). Las vistas sobre el bacino son de las mejores.", tip:""},
+  {cat:"iglesia", x:652,y:690, t:"San Giorgio Maggiore", d:"Iglesia de Palladio en su propia isla. Sube al campanario: es la mejor vista de San Marcos y con menos cola.", tip:"Vaporetto 2 desde San Zaccaria, una parada."},
+  {cat:"iglesia", x:438,y:772, t:"Il Redentore", d:"Iglesia votiva de Palladio en la Giudecca. Cada tercer fin de semana de julio se llega por un puente de barcas, con fuegos artificiales.", tip:""},
+  {cat:"palacio", x:340,y:600, t:"Gallerie dell'Accademia", d:"La mejor pinacoteca de pintura veneciana: Bellini, Giorgione, Tiziano, Veronés, Tintoretto.", tip:"Junto al puente de madera de la Accademia, con vistas a la Salute."},
+  {cat:"palacio", x:410,y:625, t:"Colección Peggy Guggenheim", d:"Arte del siglo XX (Picasso, Pollock, Magritte…) en el palacio inacabado Venier dei Leoni, sobre el Canal Grande.", tip:"Cierra los martes."},
+  {cat:"palacio", x:308,y:528, t:"Ca' Rezzonico", d:"Palacio sobre el Canal Grande dedicado al siglo XVIII veneciano, con frescos de Tiepolo.", tip:""},
+  {cat:"palacio", x:461,y:330, t:"Ca' d'Oro", d:"La fachada gótica más bonita del Canal Grande, antes cubierta de pan de oro. Dentro, la Galleria Franchetti.", tip:""},
+  {cat:"palacio", x:449,y:545, t:"Teatro La Fenice", d:"Uno de los grandes teatros de ópera del mundo, reconstruido tras los incendios de 1836 y 1996.", tip:"Se puede visitar de día con audioguía."},
+  {cat:"palacio", x:299,y:214, t:"Gueto judío", d:"El primer gueto (1516); la palabra viene de aquí. Se visitan sus sinagogas con el Museo Judío.", tip:""},
+  {cat:"iglesia", x:438,y:185, t:"Madonna dell'Orto", d:"La iglesia de Tintoretto, que está enterrado aquí, en el rincón más tranquilo de Cannaregio.", tip:""},
+  {cat:"comer", x:372,y:242, t:"Fondamenta della Misericordia", d:"Canal de Cannaregio lleno de bácaros donde van los venecianos al atardecer. Ambiente de aperitivo con spritz al Select.", tip:""},
+  {cat:"comer", x:258,y:528, t:"Campo Santa Margherita", d:"Plaza universitaria de Dorsoduro, con terrazas sin precios de San Marcos.", tip:""},
+  {cat:"comer", x:290,y:650, t:"Già Schiavi y Squero di San Trovaso", d:"Taberna histórica de cicchetti frente a uno de los últimos astilleros de góndolas en activo.", tip:"Toma la ombra de pie en la orilla, mirando el squero."},
+  {cat:"palacio", x:635,y:428, t:"Libreria Acqua Alta", d:"Librería con libros en góndolas y bañeras para protegerlos de la marea.", tip:""},
+  {cat:"palacio", x:812,y:518, t:"Arsenal", d:"El gran astillero de la República, capaz de botar una galera al día. La puerta de tierra está custodiada por leones griegos traídos como botín.", tip:"Por dentro abre durante la Biennale."}
+];
+const active = new Set(Object.keys(CATS));
+const NS="http://www.w3.org/2000/svg";
+const pinsG=document.getElementById("pins"), list=document.getElementById("list"), chips=document.getElementById("chips");
+
+Object.entries(CATS).forEach(([k,v])=>{
+  const b=document.createElement("button"); b.className="chip"; b.innerHTML=`<i style="background:${v.c}"></i>${v.n}`;
+  b.onclick=()=>{active.has(k)?active.delete(k):active.add(k); b.classList.toggle("off"); refresh();};
+  chips.appendChild(b);
+});
+
+P.forEach((p,i)=>{
+  const n=i+1, col=CATS[p.cat].c;
+  const g=document.createElementNS(NS,"g"); g.setAttribute("class","pin"); g.style.animationDelay=(i*30)+"ms";
+  g.innerHTML=`<circle class="halo" cx="${p.x}" cy="${p.y}" r="24" stroke="${col}"/>
+    <circle class="dot" cx="${p.x}" cy="${p.y}" r="13" fill="${col}"/>
+    <text x="${p.x}" y="${p.y+4}" text-anchor="middle">${n}</text>
+    <text class="lbl" x="${p.x+ (p.x>700?-20:20)}" y="${p.y-14}" text-anchor="${p.x>700?'end':'start'}">${p.t}</text>`;
+  g.onclick=()=>select(i);
+  pinsG.appendChild(g); p.g=g;
+  const li=document.createElement("li"); li.innerHTML=`<span class="num" style="background:${col}">${n}</span>${p.t}`;
+  li.onclick=()=>select(i); list.appendChild(li); p.li=li;
+});
+
+function select(i){
+  const p=P[i], col=CATS[p.cat].c;
+  P.forEach(q=>{q.g.classList.remove("active");q.li.classList.remove("active")});
+  p.g.classList.add("active"); p.li.classList.add("active");
+  pinsG.appendChild(p.g);
+  document.getElementById("detail").innerHTML=`<div class="cat" style="color:${col}">${i+1} · ${CATS[p.cat].n}</div>
+    <h2>${p.t}</h2><p>${p.d}</p>${p.tip?`<p class="tip">${p.tip}</p>`:""}`;
+  if(window.innerWidth<=900) document.getElementById("detail").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function refresh(){P.forEach(p=>{const on=active.has(p.cat);p.g.classList.toggle("hidden",!on);p.li.classList.toggle("hidden",!on)});}
+
+/* ---------- Itinerario por días ---------- */
+const DAYS = {
+  jue:{ name:"Jueves 26 · Iglesias de Tiziano, un palacio y Palladio", col:"#2f5d73",
+    intro:`<p><strong>Tres iglesias, una scuola y un palacio del XVIII:</strong> los Frari y San Rocco por la mañana, Ca' Rezzonico después de comer, y las dos iglesias de Palladio en la Giudecca y San Giorgio para terminar viendo el atardecer.</p>
+      <p><strong>Compra el pase de 24 horas</strong> (25 €) en la app AVM o en la taquilla de la parada Ferrovia: harás unos 5 viajes.</p>
+      <p><strong>Entradas del día, todas en la puerta:</strong> Frari, San Rocco (10 €) y Ca' Rezzonico (15 €).</p>
+      <p class="tip">No he podido confirmar los horarios de los Frari, el Redentore y el campanario de San Giorgio; míralos antes de ir.</p>`,
+    stops:[
+      {x:188,y:327,time:"10:00",t:"Santa Lucia",d:"Llegas en tren desde Treviso. Compra el pase y coge la <strong>línea 1</strong> hasta San Tomà: unos 20 minutos por la primera mitad del Canal Grande.",tip:""},
+      {x:299,y:446,time:"10:30",t:"Basílica dei Frari",d:"Unos 45 minutos. En el altar mayor está la <em>Asunción</em> de Tiziano, y en la nave su tumba y la <em>Pala Pesaro</em>. En la sacristía, el tríptico de Giovanni Bellini.",tip:"Para entrar hay que pagar."},
+      {x:270,y:470,time:"11:30",t:"Scuola Grande di San Rocco",d:"La sede de una cofradía rica, con salas enteras de mármol y oro y más de 60 lienzos de Tintoretto pintados para ellas (10 €). Calcula una hora.",tip:"Coge uno de los espejos que prestan para ver el techo."},
+      {x:258,y:528,time:"12:45",t:"Comer en Campo Santa Margherita",d:"A 5 minutos a pie. <em>Cicchetti</em> y terrazas a precios de barrio universitario.",tip:""},
+      {x:308,y:528,time:"13:45",t:"Ca' Rezzonico",d:"<strong>El lujo de un palacio del Canal Grande:</strong> salones del siglo XVIII con frescos de Tiepolo, arañas de Murano, muebles lacados, los Canaletto y las escenas de Pietro Longhi (15 €). Calcula una hora y cuarto.",tip:"Ahora mismo hay un andamio en el Salón de Baile y no se ve su techo; el resto del museo sí se puede visitar. Última entrada a las 16:00."},
+      {x:330,y:690,time:"15:05",t:"Zattere",d:"Diez minutos a pie, pasando por el <strong>Squero di San Trovaso</strong>, uno de los últimos astilleros de góndolas. En Zattere coge el vaporetto hasta la parada Redentore (5 minutos).",tip:""},
+      {x:438,y:772,time:"15:15",t:"Il Redentore",d:"La iglesia votiva de <strong>Palladio</strong> (1577), blanca y luminosa, construida tras la peste. Media hora es suficiente.",tip:"La Giudecca es un barrio de vecinos, con muy pocos turistas."},
+      {x:652,y:690,time:"15:55",t:"San Giorgio Maggiore",d:"Desde Redentore, la <strong>línea 2</strong> te lleva hasta San Giorgio en unos 5 minutos. Es la otra gran iglesia de Palladio, con dos Tintoretto en el presbiterio, entre ellos <em>La Última Cena</em>. Sube al campanario hacia las 16:15: <strong>el sol se pone sobre San Marcos hacia las 16:30</strong>.",tip:"Es la mejor vista de la ciudad y tiene menos cola que el Campanile."},
+      {x:690,y:574,time:"17:00",t:"Riva degli Schiavoni",d:"La línea 2 te deja en San Zaccaria en 5 minutos. Ve paseando por la Riva y la plaza de San Marcos, ya iluminadas, hacia Rialto.",tip:"Mañana vuelves aquí: esta noche solo mírala por fuera."},
+      {x:458,y:384,time:"18:00",t:"Cena en Rialto",d:"Ve de bácaro en bácaro alrededor del mercado (<strong>Cantina Do Mori</strong>, <strong>All'Arco</strong>…) y cruza el puente de noche. Vuelve a la estación con la línea 1 o la 2 usando el mismo pase.",tip:"Por 2 € puedes probar el <em>traghetto</em>, la góndola pública que cruza el Canal Grande junto al mercado, si sigue funcionando a esa hora. No he podido confirmar los horarios de noche de los bácaros, ni del último tren a Treviso: míralos en Trainline."}
+    ]},
+  vie:{ name:"Viernes 27 · Palacios y basílica de San Marcos", col:"#a8392b",
+    intro:`<p><strong>Todo el día en la plaza de San Marcos:</strong> los salones de gala del Palacio Ducal, los apartamentos de Sissi en las Salas Reales y la Basílica. Solo necesitas un viaje de vaporetto (9,50 € pagando con la tarjeta en el validador).</p>
+      <p><strong>Reserva ya:</strong></p>
+      <ul><li><a href="https://muve.vivaticket.it/en/tour/palazzo-ducale/2478" target="_blank" rel="noopener">Entrada de los Museos de San Marcos</a> con hora para el Palacio Ducal hacia las 11:15 (35 €). Incluye el Correr, el Museo Arqueológico y la Marciana.</li>
+      <li><a href="https://correr.visitmuve.it/percorsi-e-collezioni/sale-reali/" target="_blank" rel="noopener">Salas Reales a las 14:00</a> (en italiano, +5 €). Si prefieres inglés, hay pase a las 15:30; entonces mueve la Basílica a las 14:00.</li>
+      <li>La <a href="https://tickets.basilicasanmarco.it/" target="_blank" rel="noopener">Basílica de San Marcos a las 15:45</a>, con el Museo de los Caballos. La Pala d'Oro es opcional.</li></ul>
+      <p class="tip">Total del viernes: unos 40 € en museos más la Basílica.</p>`,
+    stops:[
+      {x:188,y:327,time:"10:00",t:"Santa Lucia y Canal Grande",d:"Llegas en tren desde Treviso. Coge la <strong>línea 1</strong> hasta San Marco: unos 45 minutos por todo el Canal Grande y sus palacios.",tip:"Paga acercando la tarjeta bancaria al validador del embarcadero."},
+      {x:560,y:568,time:"10:50",t:"Piazzetta: lo antiguo a la vista",d:"Tienes media hora para ver los <strong>Tetrarcas</strong> de pórfido (s. IV) en la esquina de la basílica, los <strong>Pilares de Acre</strong> y las columnas de San Marcos y San Teodoro.",tip:""},
+      {x:600,y:548,time:"11:15",t:"Palacio Ducal",d:"<strong>Los salones de gala de la República:</strong> la Escalera de Oro, la Sala del Colegio y la del Senado con techos de Veronés y Tintoretto, y la inmensa Sala del Maggior Consiglio con el <em>Paraíso</em>. Termina cruzando el Puente de los Suspiros. Calcula unas dos horas.",tip:"Entrada por la Porta del Frumento. La audioguía de la app MUVE está incluida."},
+      {x:640,y:500,time:"13:15",t:"Comer en Castello",d:"Algo rápido en un bácaro detrás de San Zaccaria, a 5 minutos. Tienes que volver a la plaza a las 13:50.",tip:""},
+      {x:543,y:540,time:"14:00",t:"Salas Reales del Museo Correr",d:"<strong>Los apartamentos privados de Napoleón, los Habsburgo y los Saboya:</strong> el dormitorio, el tocador y el estudio de <strong>Sissi</strong>, el despacho de Francisco José y una sala morisca, con sus muebles originales. Grupos de 10 personas como máximo.",tip:"Al acabar, sigue sin salir del edificio: con la entrada solo se entra una vez a cada museo."},
+      {x:520,y:552,time:"14:50",t:"Museo Arqueológico y Marciana",d:"En el mismo edificio: escultura griega y romana de la colección Grimani y las salas monumentales de la Biblioteca Marciana, con techos de Tiziano y Veronés.",tip:""},
+      {x:578,y:515,time:"15:45",t:"Basílica de San Marcos",d:"Algo más de una hora: los mosaicos dorados de la nave y, arriba, el Museo con los caballos de bronce originales y la Loggia sobre la plaza iluminada. Cierra a las 17:15.",tip:"Hombros y rodillas cubiertos, sin mochila grande."},
+      {x:578,y:405,time:"17:15",t:"Miracoli y San Zanipolo",d:"Unos 15 minutos a pie por Castello, ya de noche: la fachada de mármol de Santa Maria dei Miracoli y la plaza de Santi Giovanni e Paolo con el Colleoni de Verrocchio.",tip:"No he comprobado a qué hora cierran; probablemente solo las verás por fuera."},
+      {x:372,y:242,time:"18:15",t:"Cena en la Misericordia",d:"Aperitivo y cena de bácaro en bácaro en Cannaregio. Desde aquí la estación está a <strong>15 minutos a pie</strong>.",tip:"Comprueba en Trainline a qué hora sale el último tren a Treviso."}
+    ]}
+};
+const routeG=document.getElementById("route"), rlist=document.getElementById("rlist"), detailEl=document.getElementById("detail");
+const defaultDetail=detailEl.innerHTML;
+let curDay=null;
+
+function setMode(m){
+  document.querySelectorAll(".mode").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+  const all=m==="all";
+  pinsG.style.display=all?"":"none"; chips.classList.toggle("gone",!all);
+  list.style.display=all?"":"none"; rlist.style.display=all?"none":"";
+  document.getElementById("listTitle").textContent=all?"Los sitios":"Paradas del día";
+  routeG.innerHTML=""; rlist.innerHTML="";
+  if(all){curDay=null; detailEl.innerHTML=defaultDetail; return;}
+  curDay=m; const D=DAYS[m];
+  // ruta: tramos en ciudad punteados, tramos a las islas con trazo largo
+  let seg="";
+  D.stops.forEach((s,i)=>{ if(i===0) return; const a=D.stops[i-1];
+    const cls=(s.out||a.out)?"rpath out":"rpath";
+    const mx=(a.x+s.x)/2+(s.y-a.y)*0.12, my=(a.y+s.y)/2-(s.x-a.x)*0.12;
+    seg+=`<path class="${cls}" stroke="${D.col}" d="M${a.x} ${a.y} Q${mx} ${my} ${s.x} ${s.y}"/>`; });
+  routeG.innerHTML=seg;
+  D.stops.forEach((s,i)=>{
+    const g=document.createElementNS(NS,"g"); g.setAttribute("class","rpin"+(s.out?" out":"")); g.style.animationDelay=(i*60)+"ms";
+    const right=s.x>700;
+    g.innerHTML=`<circle cx="${s.x}" cy="${s.y}" r="15" fill="${D.col}"/>
+      <text class="n" x="${s.x}" y="${s.y+4.5}" text-anchor="middle">${i+1}</text>
+      <text class="lb" x="${s.x+(right?-22:22)}" y="${s.y+5}" text-anchor="${right?'end':'start'}">${s.time} · ${s.t}</text>`;
+    g.onclick=()=>showStop(i); routeG.appendChild(g); s.g=g;
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="num" style="background:${D.col}">${i+1}</span>${s.t}<span class="t">${s.time}</span>`;
+    li.onclick=()=>showStop(i); rlist.appendChild(li); s.li=li;
+  });
+  detailEl.innerHTML=`<div class="cat" style="color:${D.col}">${D.name}</div><h2>El plan del día</h2>${D.intro}
+    <div class="stepnav"><button onclick="showStop(0)">Empezar el recorrido →</button></div>`;
+}
+function showStop(i){
+  const D=DAYS[curDay], s=D.stops[i];
+  D.stops.forEach(q=>{q.g.classList.remove("active");q.li.classList.remove("active")});
+  s.g.classList.add("active"); s.li.classList.add("active"); routeG.appendChild(s.g);
+  detailEl.innerHTML=`<div class="cat" style="color:${D.col}">${D.name} · parada ${i+1} de ${D.stops.length}</div>
+    <div class="time" style="color:${D.col}">${s.time}</div><h2>${s.t}</h2><p>${s.d}</p>${s.tip?`<p class="tip">${s.tip}</p>`:""}
+    <div class="stepnav">${i>0?`<button onclick="showStop(${i-1})">← Anterior</button>`:""}${i<D.stops.length-1?`<button onclick="showStop(${i+1})">Siguiente →</button>`:""}</div>`;
+  if(window.innerWidth<=900) detailEl.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+</script>
+</body>
+</html>
